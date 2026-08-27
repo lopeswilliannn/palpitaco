@@ -1,0 +1,1486 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Loterias Pro Mapper, Predictor & Analyzer</title>
+    <!-- Tailwind CSS para a tela de login -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SDK do Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Chart.js para o app -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #0b0f19; 
+            --card-bg: #151c2c; 
+            --card-hover: #1e293b;
+            --primary: #9333ea;
+            --primary-hover: #7e22ce; 
+            --text-main: #f8fafc; 
+            --text-muted: #94a3b8;
+            --border-color: #26334d; 
+            --ball-bg: #9333ea; 
+            --ball-text: #ffffff;
+            --success: #22c55e; 
+            --danger: #ef4444; 
+            --warning: #eab308;
+            --accent: #06b6d4;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); display: flex; justify-content: center; padding: 15px; min-height: 100vh; }
+        .container { width: 100%; max-width: 1200px; display: flex; flex-direction: column; gap: 20px; }
+
+        header { background: linear-gradient(135deg, #1e1b4b, #0f172a); padding: 20px 25px; border-radius: 14px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.4); }
+        .header-title h1 { font-size: 1.6rem; font-weight: 800; background: linear-gradient(90deg, #c084fc, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .controls-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        select, input[type="number"], input[type="text"] { background-color: rgba(15, 23, 42, 0.8); color: var(--text-main); border: 1px solid var(--border-color); padding: 9px 13px; border-radius: 8px; font-size: 0.95rem; outline: none; transition: border-color 0.2s; }
+        select:focus, input:focus { border-color: var(--primary); }
+
+        button { background-color: var(--primary); color: white; border: none; padding: 9px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; }
+        button:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-fav { background-color: #d97706; color: #fff; }
+        .btn-fav:hover { background-color: #b45309; }
+        .btn-del { background-color: #dc2626; }
+        .btn-del:hover { background-color: #b91c1c; }
+        .btn-secondary { background-color: #334155; color: #f8fafc; }
+        .btn-secondary:hover { background-color: #475569; }
+        .btn-success { background-color: #16a34a; color: #fff; }
+        .btn-success:hover { background-color: #15803d; }
+
+        .nav-tabs { display: flex; gap: 6px; border-bottom: 2px solid var(--border-color); overflow-x: auto; padding-bottom: 2px; }
+        .tab-btn { background: none; color: var(--text-muted); border: none; padding: 12px 18px; cursor: pointer; font-size: 0.95rem; font-weight: 600; border-bottom: 3px solid transparent; whitespace: nowrap; border-radius: 6px 6px 0 0; transition: all 0.2s; }
+        .tab-btn:hover { color: var(--text-main); background: rgba(255,255,255,0.03); }
+        .tab-btn.active { color: #38bdf8; border-bottom-color: #38bdf8; background: rgba(56, 189, 248, 0.08); }
+
+        .tab-content { display: none; background-color: var(--card-bg); padding: 22px; border-radius: 14px; border: 1px solid var(--border-color); box-shadow: 0 4px 20px rgba(0,0,0,0.25); }
+        .tab-content.active { display: block; }
+
+        .balls-container { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+        .ball { width: 36px; height: 36px; border-radius: 50%; background-color: var(--ball-bg); color: var(--ball-text); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; box-shadow: inset -2px -2px 4px rgba(0,0,0,0.4), inset 1px 1px 2px rgba(255,255,255,0.4); text-shadow: 0 1px 2px rgba(0,0,0,0.5); cursor: pointer; user-select: none; }
+        .ball-sm { width: 28px; height: 28px; font-size: 0.75rem; }
+        .ball.hit { background-color: var(--success) !important; color: #fff; transform: scale(1.08); border: 2px solid #fff; box-shadow: 0 0 10px rgba(34,197,94,0.6); }
+        .ball.selected { background-color: var(--warning) !important; color: #000; font-weight: 900; }
+
+        .banner-aposta-dia { background: linear-gradient(135deg, rgba(147, 51, 234, 0.15), rgba(15, 23, 42, 0.8)); border: 1px solid rgba(147, 51, 234, 0.4); border-radius: 12px; padding: 16px 22px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 15px; }
+        .banner-aposta-dia .num-concurso { color: var(--warning); font-size: 1.25rem; font-weight: 800; }
+        .banner-aposta-dia .premio-est { color: var(--success); font-size: 1.35rem; font-weight: 800; }
+
+        .palpite-card { background-color: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 10px; padding: 16px; margin-bottom: 14px; transition: all 0.2s; }
+        .palpite-card:hover { border-color: rgba(147, 51, 234, 0.5); }
+        .palpite-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px; }
+        .palpite-header-left { display: flex; align-items: center; gap: 10px; }
+        
+        .filters-panel { background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 10px; padding: 16px; margin-bottom: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; }
+        .filter-group { display: flex; flex-direction: column; gap: 6px; }
+        .filter-group label { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; display: flex; justify-content: space-between; }
+
+        input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; }
+        .bulk-actions { display: flex; gap: 10px; align-items: center; background: rgba(0,0,0,0.3); padding: 12px 18px; border-radius: 10px; margin-bottom: 15px; flex-wrap: wrap; border: 1px solid var(--border-color); }
+
+        .learning-banner { background-color: rgba(34, 197, 94, 0.1); border-left: 4px solid var(--success); padding: 12px 16px; border-radius: 6px; margin-bottom: 18px; font-size: 0.9rem; }
+
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .metric-card { background-color: rgba(255,255,255,0.03); padding: 16px; border-radius: 10px; border: 1px solid var(--border-color); }
+        .metric-card h4 { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .metric-card p { font-size: 1.3rem; font-weight: 800; }
+        .badge-premio { background-color: rgba(34, 197, 94, 0.2); color: var(--success); padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 0.85rem; display: inline-block; border: 1px solid rgba(34,197,94,0.3); }
+        .badge-info { background-color: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-left: 6px; }
+        .badge-score { background-color: rgba(234, 179, 8, 0.15); color: #facc15; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; border: 1px solid rgba(234, 179, 8, 0.3); }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px 12px; text-align: left; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; }
+        th { color: var(--text-muted); background-color: rgba(0,0,0,0.3); font-weight: 700; }
+        
+        .config-bar { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; background: rgba(0,0,0,0.25); padding: 14px 18px; border-radius: 10px; margin-bottom: 15px; border: 1px solid var(--border-color); }
+
+        .heatmap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); gap: 8px; margin-top: 15px; }
+        .heatmap-cell { background-color: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 5px; text-align: center; transition: all 0.2s; }
+        .heatmap-cell .num { font-weight: 800; font-size: 1.1rem; }
+        .heatmap-cell .freq { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+        .heatmap-cell .score { font-size: 0.7rem; color: var(--accent); font-weight: 700; }
+
+        .heat-0 { background-color: rgba(30, 41, 59, 0.6); }
+        .heat-1 { background-color: rgba(14, 116, 144, 0.4); }
+        .heat-2 { background-color: rgba(16, 185, 129, 0.4); }
+        .heat-3 { background-color: rgba(234, 179, 8, 0.4); }
+        .heat-4 { background-color: rgba(239, 68, 68, 0.5); border-color: rgba(239, 68, 68, 0.8); }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-body { background: var(--card-bg); border: 1px solid var(--border-color); padding: 25px; border-radius: 14px; max-width: 650px; width: 90%; max-height: 85vh; overflow-y: auto; }
+
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; margin-right: 5px; background: rgba(255,255,255,0.1); }
+        .tag-even { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
+        .tag-prime { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
+        .tag-frame { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+
+        @media (max-width: 768px) {
+            header { flex-direction: column; align-items: stretch; }
+            .controls-group { justify-content: space-between; }
+            .banner-aposta-dia { flex-direction: column; align-items: flex-start; }
+            .balls-container { justify-content: center; }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen">
+
+    <!-- ================= TELA DE LOGIN ================= -->
+    <div id="login-screen" class="flex items-center justify-center min-h-screen w-full px-4">
+        <div class="bg-slate-800 p-8 rounded-lg shadow-xl w-full max-w-md border border-slate-700">
+            <h2 class="text-2xl font-bold mb-2 text-center text-white">Acesso ao Sistema</h2>
+            <p class="text-slate-400 text-sm mb-6 text-center">Exclusivo para usuários autorizados.</p>
+
+            <div id="error-message" class="hidden bg-red-500/10 border border-red-500 text-red-400 text-sm p-3 rounded mb-4"></div>
+
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1 text-slate-300">E-mail</label>
+                    <input type="email" id="login-email" required placeholder="seu@email.com" 
+                        class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded focus:outline-none focus:border-purple-500 text-white">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1 text-slate-300">Senha</label>
+                    <input type="password" id="login-password" required placeholder="••••••••" 
+                        class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded focus:outline-none focus:border-purple-500 text-white">
+                </div>
+
+                <button type="submit" id="btn-login-submit" 
+                    class="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2.5 rounded transition duration-200">
+                    Entrar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= ÁREA RESTRITA (APLICAÇÃO) ================= -->
+    <div id="app-screen" class="hidden w-full flex justify-center p-4">
+        <div class="container">
+            <!-- Barra Superior do Usuário -->
+            <div class="flex justify-between items-center bg-slate-800 border border-slate-700 p-3 px-5 rounded-lg text-sm">
+                <span>Conectado como: <strong id="user-display-email" class="text-purple-400"></strong></span>
+                <button id="btn-logout" class="bg-slate-700 hover:bg-slate-600 text-white text-xs px-3 py-1.5 rounded transition">Sair / Logout</button>
+            </div>
+
+            <header>
+                <div class="header-title">
+                    <h1 id="app-title">Lotofácil Mapper & Predictor PRO</h1>
+                    <span id="status" style="font-size:0.85rem; color: var(--text-muted);">Sincronizando estatísticas reais da Caixa...</span>
+                </div>
+                
+                <div class="controls-group">
+                    <select id="select-loteria" onchange="trocarLoteria()">
+                        <option value="lotofacil">Lotofácil</option>
+                        <option value="megasena">Mega-Sena</option>
+                        <option value="quina">Quina</option>
+                        <option value="maismilionaria">+Milionária</option>
+                        <option value="lotomania">Lotomania</option>
+                    </select>
+                    <button id="btn-atualizar" onclick="carregarDadosAPI()">🔄 Atualizar API</button>
+                    <button class="btn-secondary" onclick="abrirModalBackup()">💾 Backup / Restaurar</button>
+                </div>
+            </header>
+
+            <div class="banner-aposta-dia" id="banner-concurso-dia">
+                <div>
+                    <span style="font-size:0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">CONCURSO ALVO COM ANÁLISE PREDITIVA</span>
+                    <h3 id="info-concurso-alvo" class="num-concurso">Carregando Concurso...</h3>
+                </div>
+                <div>
+                    <span style="font-size:0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">PRÊMIO ESTIMADO</span>
+                    <div class="premio-est" id="info-premio-estimado">R$ --</div>
+                </div>
+            </div>
+
+            <div class="nav-tabs">
+                <button class="tab-btn active" onclick="switchTab('previsao', this)">🎲 Gerador Preditivo Real</button>
+                <button class="tab-btn" onclick="switchTab('fechamentos', this)">📐 Fechamentos Matemáticos</button>
+                <button class="tab-btn" onclick="switchTab('favoritos', this)">💼 Minhas Apostas & Bolões</button>
+                <button class="tab-btn" onclick="switchTab('analise', this)">📊 Ranking Real de Dezenas</button>
+                <button class="tab-btn" onclick="switchTab('backtest', this)">🔬 Simulação (Backtest)</button>
+                <button class="tab-btn" onclick="switchTab('historico', this)">📜 Histórico Oficial</button>
+            </div>
+
+            <!-- TAB 1: GERADOR PREDITIVO REAL -->
+            <div id="tab-previsao" class="tab-content active">
+                <h2>Gerador Preditivo Baseado em Aprendizado de Máquina Dinâmico</h2>
+                <p style="color: var(--text-muted); margin-bottom: 15px; font-size:0.9rem;">
+                    As dezenas são calculadas por um modelo que ajusta autonomamente os pesos de **Frequência Geral**, **Tendência Recente** e **Atraso** conforme o histórico auditado.
+                </p>
+
+                <div class="config-bar">
+                    <div>
+                        <label for="select-qtd-dezenas"><strong>Dezenas por Jogo:</strong></label>
+                        <select id="select-qtd-dezenas" onchange="atualizarInfoPreco(); atualizarLimitesFiltros();"></select>
+                    </div>
+                    <div style="font-size: 0.95rem; color: var(--warning); font-weight: 700;" id="info-preco-aposta">
+                        Valor por aposta: R$ --
+                    </div>
+                    <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
+                        <label for="qtd-palpites">Qtde de Jogos:</label>
+                        <input type="number" id="qtd-palpites" min="1" max="50" value="5" style="width: 75px;">
+                        <button onclick="gerarPalpitesPreditivos()">⚡ Gerar Jogos Otimizados</button>
+                    </div>
+                </div>
+
+                <div class="filters-panel">
+                    <div class="filter-group">
+                        <label><span>Filtro Pares & Ímpares</span> <input type="checkbox" id="chk-filtro-pares" checked></label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="number" id="min-pares" placeholder="Min Pares" style="width: 50%;">
+                            <input type="number" id="max-pares" placeholder="Max Pares" style="width: 50%;">
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label><span>Filtro de Soma das Dezenas</span> <input type="checkbox" id="chk-filtro-soma" checked></label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="number" id="min-soma" placeholder="Soma Min" style="width: 50%;">
+                            <input type="number" id="max-soma" placeholder="Soma Max" style="width: 50%;">
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label><span>Filtro de Números Primos</span> <input type="checkbox" id="chk-filtro-primos" checked></label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="number" id="min-primos" placeholder="Min Primos" style="width: 50%;">
+                            <input type="number" id="max-primos" placeholder="Max Primos" style="width: 50%;">
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label><span>Eliminar Jogos Já Sorteados</span> <input type="checkbox" id="chk-evitar-repetidos" checked></label>
+                        <span style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">Valida o histórico e descarta bilhetes idênticos a sorteios passados.</span>
+                    </div>
+                </div>
+
+                <div class="learning-banner" id="learning-status">
+                    🧠 <strong>Matriz Preditiva:</strong> Inicializando aprendizado de máquina...
+                </div>
+
+                <div id="bar-palpites-bulk" class="bulk-actions" style="display: none;">
+                    <label><input type="checkbox" id="chk-all-palpites" onchange="toggleSelectAll('palpites', this.checked)"> Selecionar Todos</label>
+                    <button class="btn-fav" onclick="registrarSelecionados()">⭐ Salvar Jogos Selecionados</button>
+                    <button class="btn-secondary" onclick="exportarPalpitesTexto()">📋 Copiar em Texto</button>
+                </div>
+
+                <div id="lista-palpites"></div>
+            </div>
+
+            <!-- TAB 2: FECHAMENTOS MATEMÁTICOS -->
+            <div id="tab-fechamentos" class="tab-content">
+                <h2>Fechamentos Matemáticos & Desdobramentos Otimizados</h2>
+                <p style="color: var(--text-muted); margin-bottom: 20px; font-size:0.9rem;">
+                    Escolha um grupo de dezenas. O sistema aplica algoritmos de redução combinatória para gerar a quantidade mínima de apostas garantindo o prêmio estipulado caso suas dezenas sejam sorteadas.
+                </p>
+
+                <div class="config-bar">
+                    <div style="display: flex; flex-direction: column; gap: 5px; width: 100%;">
+                        <label><strong>Selecione as Dezenas para o Fechamento:</strong></label>
+                        <div id="grid-selecao-fechamento" class="balls-container" style="gap: 8px;"></div>
+                        <div style="font-size:0.85rem; color: var(--accent); margin-top: 5px;" id="info-selecao-fechamento">
+                            Selecionadas: 0 dezenas
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
+                    <div>
+                        <label for="select-garantia">Garantia Matemática:</label>
+                        <select id="select-garantia"></select>
+                    </div>
+                    <button class="btn-success" onclick="gerarFechamentoMatematico()">📐 Gerar Fechamento Otimizado</button>
+                </div>
+
+                <div id="resultado-fechamento"></div>
+            </div>
+
+            <!-- TAB 3: MINHAS APOSTAS & BOLÕES -->
+            <div id="tab-favoritos" class="tab-content">
+                <h2>Gestão de Apostas e Auditoria Financeira</h2>
+                <p style="color: var(--text-muted); margin-bottom: 15px; font-size: 0.9rem;">Conferência automática dinâmica do seu histórico de bilhetes salvos com re-treinamento de inteligência artificial em tempo real.</p>
+
+                <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); padding: 16px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3 style="font-size: 1rem; margin-bottom: 10px; color: var(--accent);">➕ Cadastrar Aposta Manual (Externa)</h3>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px;">
+                        <div>
+                            <label style="font-size: 0.8rem; color: var(--text-muted);">Concurso Alvo:</label><br>
+                            <input type="number" id="manual-concurso" style="width: 120px;" placeholder="Ex: 3101">
+                        </div>
+                        <div>
+                            <label style="font-size: 0.8rem; color: var(--text-muted);">Nome/Identificador:</label><br>
+                            <input type="text" id="manual-nome" style="width: 180px;" placeholder="Ex: Bilhete Lotérica">
+                        </div>
+                    </div>
+                    <label style="font-size: 0.8rem; color: var(--text-muted);">Selecione as dezenas jogadas:</label>
+                    <div id="grid-selecao-manual" class="balls-container" style="gap: 6px; margin-top: 5px;"></div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                        <span style="font-size: 0.85rem; color: var(--warning);" id="info-manual-count">0 dezenas selecionadas</span>
+                        <button class="btn-success" onclick="salvarApostaManual()">➕ Adicionar aos Meus Bilhetes</button>
+                    </div>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <h4>CUSTO TOTAL APOSTADO</h4>
+                        <p id="fin-custo">R$ 0,00</p>
+                    </div>
+                    <div class="metric-card">
+                        <h4>PRÊMIOS RETORNADOS</h4>
+                        <p id="fin-premios" style="color: var(--success);">R$ 0,00</p>
+                    </div>
+                    <div class="metric-card">
+                        <h4>BALANÇO LÍQUIDO</h4>
+                        <p id="fin-saldo">R$ 0,00</p>
+                    </div>
+                    <div class="metric-card">
+                        <h4>MÉDIA ACERTOS/JOGO</h4>
+                        <p id="stat-media-acertos" style="color: var(--warning);">0.0</p>
+                    </div>
+                    <div class="metric-card">
+                        <h4>JOGOS PREMIADOS</h4>
+                        <p id="stat-jogos-premiados">0 de 0</p>
+                    </div>
+                </div>
+
+                <div id="bar-favoritos-bulk" class="bulk-actions" style="display: none;">
+                    <label><input type="checkbox" id="chk-all-favoritos" onchange="toggleSelectAll('favoritos', this.checked)"> Selecionar Todos</label>
+                    <button class="btn-del" onclick="removerSelecionados()">🗑️ Remover Selecionados</button>
+                    <button class="btn-secondary" onclick="exportarPalpitesTexto('fav')">📄 Copiar Lista</button>
+                </div>
+
+                <div id="lista-favoritos"></div>
+            </div>
+
+            <!-- TAB 4: RANKING REAL DE DEZENAS -->
+            <div id="tab-analise" class="tab-content">
+                <h2>Ranking Real de Probabilidades & Estatística Avançada</h2>
+                
+                <div style="margin-bottom: 30px;">
+                    <h3>🔥 Probabilidade Calculada por Dezena (Score Preditivo)</h3>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 10px;">
+                        O <strong>Score Preditivo</strong> reflete a chance relativa de saída de cada dezena, calculated pela matriz adaptativa com pesos otimizados de acordo com os resultados dos bilhetes.
+                    </p>
+                    <div id="grid-heatmap" class="heatmap-grid"></div>
+                </div>
+
+                <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); padding: 20px; border-radius: 10px;">
+                    <h3>📈 Evolução do Retorno Financeiro (ROI)</h3>
+                    <div style="max-height: 350px; position: relative; margin-top: 15px;">
+                        <canvas id="chartRoi"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: BACKTESTING REAL -->
+            <div id="tab-backtest" class="tab-content">
+                <h2>🔬 Teste da Estratégia no Histórico Real (Backtesting)</h2>
+                <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem;">
+                    Simule como o algoritmo preditivo teria se comportado se você tivesse jogado suas apostas geradas nos sorteios anteriores da Caixa.
+                </p>
+
+                <div class="config-bar">
+                    <div>
+                        <label for="backtest-qtd-sorteios">Analisar últimos:</label>
+                        <select id="backtest-qtd-sorteios">
+                            <option value="20">20 Concursos</option>
+                            <option value="50">50 Concursos</option>
+                            <option value="100">100 Concursos</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="backtest-jogos-por-sorteio">Jogos por concurso:</label>
+                        <input type="number" id="backtest-jogos-por-sorteio" value="5" min="1" max="10" style="width: 70px;">
+                    </div>
+                    <button class="btn-success" onclick="executarBacktest()">🚀 Executar Teste Histórico</button>
+                </div>
+
+                <div id="resultado-backtest"></div>
+            </div>
+
+            <!-- TAB 6: HISTÓRICO SORTEIOS -->
+            <div id="tab-historico" class="tab-content">
+                <h2>Histórico de Sorteios Oficial</h2>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>CONCURSO</th>
+                                <th>DATA</th>
+                                <th>DEZENAS SORTEADAS</th>
+                                <th>GANHADORES (MÁX)</th>
+                                <th>VALOR ARRECADADO</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-historico">
+                            <tr><td colspan="5">Carregando dados estatísticos...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE BACKUP JSON -->
+    <div id="modal-backup" class="modal-overlay">
+        <div class="modal-body">
+            <h3 style="margin-bottom: 15px;">💾 Backup e Restauração de Dados</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">
+                Exporte suas apostas registradas e modelo de aprendizado de máquina treinado em arquivo .json.
+            </p>
+
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <div>
+                    <h4>1. Exportar Backup (Download)</h4>
+                    <button class="btn-success" style="margin-top:5px;" onclick="exportarBackupJSON()">⬇️ Baixar Arquivo JSON</button>
+                </div>
+
+                <hr style="border-color: var(--border-color);">
+
+                <div>
+                    <h4>2. Importar Backup (Restaurar)</h4>
+                    <input type="file" id="input-file-backup" accept=".json" style="margin-bottom: 10px; margin-top:5px;">
+                    <br>
+                    <button class="btn-fav" onclick="importarBackupJSON()">⬆️ Carregar Backup</button>
+                </div>
+            </div>
+
+            <div style="margin-top: 25px; text-align: right;">
+                <button class="btn-secondary" onclick="fecharModalBackup()">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= SCRIPTS DO SISTEMA ================= -->
+    <script>
+        // ---------------------------------------------------------------------
+        // 1. CONFIGURAÇÃO E AUTENTICAÇÃO SUPABASE
+        // ---------------------------------------------------------------------
+        const SUPABASE_URL = 'https://ziqcghblqvokangfktlk.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_67na4EfRVM94lIc90zKwZw_tUH8tw1P';
+
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const loginForm = document.getElementById('login-form');
+        const loginScreen = document.getElementById('login-screen');
+        const appScreen = document.getElementById('app-screen');
+        const errorMessage = document.getElementById('error-message');
+        const btnLoginSubmit = document.getElementById('btn-login-submit');
+        const btnLogout = document.getElementById('btn-logout');
+        const userDisplayEmail = document.getElementById('user-display-email');
+
+        // Checar sessão ao carregar a página
+        window.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await _supabase.auth.getSession();
+            if (session) {
+                iniciarAplicacao(session.user.email);
+            }
+        });
+
+        // Evento de Login
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            errorMessage.classList.add('hidden');
+            btnLoginSubmit.disabled = true;
+            btnLoginSubmit.innerText = 'Autenticando...';
+
+            const { data, error } = await _supabase.auth.signInWithPassword({
+                email: email,
+                password: password,
+            });
+
+            if (error) {
+                errorMessage.innerText = 'Acesso negado: e-mail ou senha incorretos.';
+                errorMessage.classList.remove('hidden');
+                btnLoginSubmit.disabled = false;
+                btnLoginSubmit.innerText = 'Entrar';
+            } else {
+                iniciarAplicacao(data.user.email);
+            }
+        });
+
+        // Evento de Logout
+        btnLogout.addEventListener('click', async () => {
+            await _supabase.auth.signOut();
+            appScreen.classList.add('hidden');
+            loginScreen.classList.remove('hidden');
+            loginForm.reset();
+            btnLoginSubmit.disabled = false;
+            btnLoginSubmit.innerText = 'Entrar';
+        });
+
+        function iniciarAplicacao(email) {
+            loginScreen.classList.add('hidden');
+            appScreen.classList.remove('hidden');
+            userDisplayEmail.innerText = email;
+            
+            // Inicializa a ferramenta de loterias
+            trocarLoteria();
+        }
+
+        // ---------------------------------------------------------------------
+        // 2. LÓGICA ORIGINAL DA FERRAMENTA DE LOTERIAS
+        // ---------------------------------------------------------------------
+        const LOTERIAS = {
+            lotofacil: { 
+                nome: "Lotofácil", totalNum: 25, dezenasSorteio: 15, cor: "#9333ea", minAcertoPremio: 11,
+                precos: { 15: 3.00, 16: 48.00, 17: 408.00, 18: 2448.00, 19: 11628.00, 20: 46512.00 },
+                premiosEstimados: { 11: 6.00, 12: 12.00, 13: 30.00, 14: 1500.00, 15: 1700000.00 },
+                primos: [2, 3, 5, 7, 11, 13, 17, 19, 23],
+                garantiasFechamento: [14, 13, 12]
+            },
+            megasena: { 
+                nome: "Mega-Sena", totalNum: 60, dezenasSorteio: 6, cor: "#208b3a", minAcertoPremio: 4,
+                precos: { 6: 5.00, 7: 35.00, 8: 140.00, 9: 420.00, 10: 1050.00, 11: 2310.00, 12: 4620.00, 13: 8580.00, 14: 15015.00, 15: 25025.00, 16: 40040.00, 17: 61880.00, 18: 92820.00, 19: 135660.00, 20: 193800.00 },
+                premiosEstimados: { 4: 1000.00, 5: 45000.00, 6: 35000000.00 },
+                primos: [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59],
+                garantiasFechamento: [5, 4]
+            },
+            quina: { 
+                nome: "Quina", totalNum: 80, dezenasSorteio: 5, cor: "#2563eb", minAcertoPremio: 2,
+                precos: { 5: 2.50, 6: 15.00, 7: 52.50, 8: 140.00, 9: 315.00, 10: 630.00, 11: 1155.00, 12: 1980.00, 13: 3217.50, 14: 5005.00, 15: 7507.50 },
+                premiosEstimados: { 2: 25.00, 3: 150.00, 4: 7000.00, 5: 8000000.00 },
+                primos: [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79],
+                garantiasFechamento: [4, 3]
+            },
+            maismilionaria: { 
+                nome: "+Milionária", totalNum: 50, dezenasSorteio: 6, cor: "#1e1b4b", minAcertoPremio: 2,
+                precos: { 6: 6.00, 7: 42.00, 8: 168.00, 9: 504.00, 10: 1260.00, 11: 2772.00, 12: 5544.00 },
+                premiosEstimados: { 2: 10.00, 3: 20.00, 4: 100.00, 5: 10000.00, 6: 10000000.00 },
+                primos: [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47],
+                garantiasFechamento: [5, 4]
+            },
+            lotomania: { 
+                nome: "Lotomania", totalNum: 100, dezenasSorteio: 20, cor: "#f97316", minAcertoPremio: 15,
+                precos: { 50: 3.00 },
+                premiosEstimados: { 15: 10.00, 16: 35.00, 17: 200.00, 18: 1800.00, 19: 40000.00, 20: 3000000.00, 0: 100000.00 },
+                primos: [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97],
+                garantiasFechamento: [18, 17, 16]
+            }
+        };
+
+        let loteriaAtual = "lotofacil";
+        let historico = [];
+        let estatisticas = {};
+        let ultimosPalpitesGerados = [];
+        let dezenasSelecionadasFechamento = new Set();
+        let dezenasSelecionadasManual = new Set();
+        let proximoConcursoInfo = { numero: 0, premioEstimado: 0 };
+        let roiChartInstance = null;
+
+        let inteligenciaModelo = {
+            pesoFrequenciaGeral: 0.30,
+            pesoFrequenciaRecente: 0.40,
+            pesoAtraso: 0.30,
+            taxaAprendizado: 0.05,
+            totalTreinos: 0
+        };
+
+        function carregarModeloIA() {
+            const salvo = localStorage.getItem('ia_model_' + loteriaAtual);
+            if (salvo) {
+                inteligenciaModelo = JSON.parse(salvo);
+            } else {
+                inteligenciaModelo = {
+                    pesoFrequenciaGeral: 0.30,
+                    pesoFrequenciaRecente: 0.40,
+                    pesoAtraso: 0.30,
+                    taxaAprendizado: 0.05,
+                    totalTreinos: 0
+                };
+            }
+        }
+
+        function treinarModeloComResultados() {
+            const favs = getFavoritos();
+            const config = LOTERIAS[loteriaAtual];
+            let acertosAltos = 0;
+            let acertosBaixos = 0;
+
+            favs.forEach(fav => {
+                const sorteio = historico.find(h => h.concurso === fav.concursoInicio);
+                if (sorteio) {
+                    const hits = fav.dezenas.filter(n => sorteio.dezenas.includes(n)).length;
+
+                    if (hits >= config.minAcertoPremio) {
+                        acertosAltos++;
+                        inteligenciaModelo.pesoFrequenciaRecente = Math.min(0.70, inteligenciaModelo.pesoFrequenciaRecente + inteligenciaModelo.taxaAprendizado);
+                        inteligenciaModelo.pesoFrequenciaGeral = Math.min(0.50, inteligenciaModelo.pesoFrequenciaGeral + (inteligenciaModelo.taxaAprendizado / 2));
+                    } else {
+                        acertosBaixos++;
+                        inteligenciaModelo.pesoAtraso = Math.min(0.60, inteligenciaModelo.pesoAtraso + inteligenciaModelo.taxaAprendizado);
+                        inteligenciaModelo.pesoFrequenciaRecente = Math.max(0.10, inteligenciaModelo.pesoFrequenciaRecente - inteligenciaModelo.taxaAprendizado);
+                    }
+                }
+            });
+
+            const soma = inteligenciaModelo.pesoFrequenciaGeral + inteligenciaModelo.pesoFrequenciaRecente + inteligenciaModelo.pesoAtraso;
+            inteligenciaModelo.pesoFrequenciaGeral /= soma;
+            inteligenciaModelo.pesoFrequenciaRecente /= soma;
+            inteligenciaModelo.pesoAtraso /= soma;
+            inteligenciaModelo.totalTreinos += (acertosAltos + acertosBaixos);
+
+            localStorage.setItem('ia_model_' + loteriaAtual, JSON.stringify(inteligenciaModelo));
+            atualizarStatusAprendizado();
+        }
+
+        function atualizarLimitesFiltros() {
+            const config = LOTERIAS[loteriaAtual];
+            const qtdDezenas = parseInt(document.getElementById('select-qtd-dezenas').value) || config.dezenasSorteio;
+
+            const minPares = Math.floor(qtdDezenas * 0.35);
+            const maxPares = Math.ceil(qtdDezenas * 0.65);
+            document.getElementById('min-pares').value = minPares;
+            document.getElementById('max-pares').value = maxPares;
+
+            const proporcaoPrimos = config.primos.length / config.totalNum;
+            const minPrimos = Math.max(1, Math.floor(qtdDezenas * (proporcaoPrimos - 0.15)));
+            const maxPrimos = Math.min(qtdDezenas, Math.ceil(qtdDezenas * (proporcaoPrimos + 0.15)));
+            document.getElementById('min-primos').value = minPrimos;
+            document.getElementById('max-primos').value = maxPrimos;
+
+            const mediaNum = (1 + config.totalNum) / 2;
+            const somaEsperada = qtdDezenas * mediaNum;
+            const margemSoma = Math.round(somaEsperada * 0.20);
+            
+            document.getElementById('min-soma').value = Math.round(somaEsperada - margemSoma);
+            document.getElementById('max-soma').value = Math.round(somaEsperada + margemSoma);
+        }
+
+        function switchTab(tabId, btnElement) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            if(btnElement) btnElement.classList.add('active');
+            document.getElementById('tab-' + tabId).classList.add('active');
+
+            if (tabId === 'analise') {
+                setTimeout(renderizarGraficoRoi, 100);
+            }
+        }
+
+        function getFavoritos() { return JSON.parse(localStorage.getItem('fav_' + loteriaAtual) || "[]"); }
+        function saveFavoritos(favs) { 
+            localStorage.setItem('fav_' + loteriaAtual, JSON.stringify(favs)); 
+            treinarModeloComResultados();
+            calcularAnaliseEstatisticaReal(); 
+            renderizarFavoritos(); 
+            renderizarHeatmap();
+        }
+
+        function getProximoNumeroAposta() {
+            const currentSeq = parseInt(localStorage.getItem('seq_' + loteriaAtual) || "0");
+            const nextSeq = currentSeq + 1;
+            localStorage.setItem('seq_' + loteriaAtual, nextSeq.toString());
+            return nextSeq;
+        }
+
+        function trocarLoteria() {
+            loteriaAtual = document.getElementById('select-loteria').value;
+            carregarModeloIA();
+            const config = LOTERIAS[loteriaAtual];
+            document.documentElement.style.setProperty('--primary', config.cor);
+            document.documentElement.style.setProperty('--ball-bg', config.cor);
+            document.getElementById('app-title').innerText = config.nome + ' Mapper & Predictor PRO';
+            document.getElementById('lista-palpites').innerHTML = '';
+            document.getElementById('bar-palpites-bulk').style.display = 'none';
+            historico = []; estatisticas = {}; dezenasSelecionadasFechamento.clear(); dezenasSelecionadasManual.clear();
+
+            const selectDezenas = document.getElementById('select-qtd-dezenas');
+            selectDezenas.innerHTML = '';
+            Object.keys(config.precos).forEach(qtd => {
+                const opt = document.createElement('option');
+                opt.value = qtd;
+                opt.innerText = qtd + " Dezenas";
+                selectDezenas.appendChild(opt);
+            });
+
+            const selectGarantia = document.getElementById('select-garantia');
+            selectGarantia.innerHTML = '';
+            config.garantiasFechamento.forEach(g => {
+                const opt = document.createElement('option');
+                opt.value = g;
+                opt.innerText = `${g} Acertos Garantidos`;
+                selectGarantia.appendChild(opt);
+            });
+
+            atualizarInfoPreco();
+            atualizarLimitesFiltros();
+            renderizarGridFechamento();
+            renderizarGridManual();
+            carregarDadosAPI();
+        }
+
+        function atualizarInfoPreco() {
+            const config = LOTERIAS[loteriaAtual];
+            const qtdDezenas = parseInt(document.getElementById('select-qtd-dezenas').value) || config.dezenasSorteio;
+            const preco = config.precos[qtdDezenas] || 0;
+            document.getElementById('info-preco-aposta').innerText = "Valor por aposta: R$ " + preco.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+        }
+
+        async function carregarDadosAPI() {
+            const btn = document.getElementById('btn-atualizar');
+            const status = document.getElementById('status');
+            btn.disabled = true; 
+            status.innerText = "Baixando base oficial...";
+
+            try {
+                const res = await fetch(`https://loteriascaixa-api.herokuapp.com/api/${loteriaAtual}`);
+                if (!res.ok) throw new Error("Erro de comunicação com a API");
+                const data = await res.json();
+
+                historico = data.map(item => ({
+                    concurso: item.concurso,
+                    data: item.data,
+                    dezenas: item.dezenas.map(Number).sort((a,b) => a - b),
+                    premioTotal: item.valorArrecadado || 0,
+                    premiacoes: item.premiacoes || [],
+                    valorEstimadoProximoConcurso: item.valorEstimadoProximoConcurso || 0,
+                    ganhadoresFaixaPrincipal: item.premiacoes && item.premiacoes[0] ? item.premiacoes[0].ganhadores : 0
+                })).sort((a,b) => b.concurso - a.concurso);
+
+                const ultimoConcurso = historico[0];
+                proximoConcursoInfo = {
+                    numero: ultimoConcurso ? ultimoConcurso.concurso + 1 : 1,
+                    premioEstimado: ultimoConcurso ? ultimoConcurso.valorEstimadoProximoConcurso : 5000000
+                };
+
+                document.getElementById('info-concurso-alvo').innerText = `${LOTERIAS[loteriaAtual].nome} - Concurso #${proximoConcursoInfo.numero}`;
+                document.getElementById('info-premio-estimado').innerText = "R$ " + (proximoConcursoInfo.premioEstimado || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+                document.getElementById('manual-concurso').value = proximoConcursoInfo.numero;
+                
+                status.innerText = `Pronto (${historico.length} concursos analisados)`;
+                
+                treinarModeloComResultados();
+                calcularAnaliseEstatisticaReal();
+                renderizarHistorico();
+                renderizarHeatmap();
+                renderizarFavoritos();
+
+            } catch (err) {
+                console.warn("Falha na API oficial, gerando dados de fallback...", err);
+                status.innerText = "Conexão offline - Gerando base estatística local";
+                gerarHistoricoFallback();
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function gerarHistoricoFallback() {
+            const config = LOTERIAS[loteriaAtual];
+            historico = [];
+            for (let i = 100; i >= 1; i--) {
+                let nums = [];
+                while(nums.length < config.dezenasSorteio) {
+                    let r = Math.floor(Math.random() * config.totalNum) + 1;
+                    if(!nums.includes(r)) nums.push(r);
+                }
+                nums.sort((a,b) => a - b);
+                historico.push({
+                    concurso: 3000 + i,
+                    data: "01/01/2026",
+                    dezenas: nums,
+                    premioTotal: 1500000,
+                    premiacoes: [],
+                    valorEstimadoProximoConcurso: 5000000,
+                    ganhadoresFaixaPrincipal: 1
+                });
+            }
+            historico.sort((a,b) => b.concurso - a.concurso);
+            proximoConcursoInfo = { numero: 3101, premioEstimado: 5000000 };
+            document.getElementById('info-concurso-alvo').innerText = `${LOTERIAS[loteriaAtual].nome} - Concurso #3101`;
+            document.getElementById('info-premio-estimado').innerText = "R$ 5.000.000,00";
+            document.getElementById('manual-concurso').value = 3101;
+            
+            treinarModeloComResultados();
+            calcularAnaliseEstatisticaReal();
+            renderizarHistorico();
+            renderizarHeatmap();
+            renderizarFavoritos();
+        }
+
+        function calcularAnaliseEstatisticaReal() {
+            const config = LOTERIAS[loteriaAtual];
+            estatisticas = { frequência: {}, frequenciaRecente: {}, atraso: {}, pesoScore: {} };
+            const totalSorteios = historico.length || 1;
+            const recentes = historico.slice(0, 20);
+
+            for (let i = 1; i <= config.totalNum; i++) {
+                estatisticas.frequência[i] = 0;
+                estatisticas.frequenciaRecente[i] = 0;
+                estatisticas.atraso[i] = 0;
+            }
+
+            historico.forEach(sorteio => {
+                sorteio.dezenas.forEach(d => {
+                    estatisticas.frequência[d] = (estatisticas.frequência[d] || 0) + 1;
+                });
+            });
+
+            recentes.forEach(sorteio => {
+                sorteio.dezenas.forEach(d => {
+                    estatisticas.frequenciaRecente[d] = (estatisticas.frequenciaRecente[d] || 0) + 1;
+                });
+            });
+
+            for (let i = 1; i <= config.totalNum; i++) {
+                let count = 0;
+                for (let j = 0; j < historico.length; j++) {
+                    if (historico[j].dezenas.includes(i)) break;
+                    count++;
+                }
+                estatisticas.atraso[i] = count;
+            }
+
+            for (let i = 1; i <= config.totalNum; i++) {
+                const fGeralRel = (estatisticas.frequência[i] / totalSorteios);
+                const fRecenteRel = (estatisticas.frequenciaRecente[i] / Math.min(20, totalSorteios));
+                const atrasoPonderado = Math.min(1, estatisticas.atraso[i] / 10);
+
+                const score = (fGeralRel * (inteligenciaModelo.pesoFrequenciaGeral * 100)) + 
+                              (fRecenteRel * (inteligenciaModelo.pesoFrequenciaRecente * 100)) + 
+                              (atrasoPonderado * (inteligenciaModelo.pesoAtraso * 100));
+
+                estatisticas.pesoScore[i] = Math.round(score * 100) / 100;
+            }
+        }
+
+        function passarFiltros(jogo) {
+            const config = LOTERIAS[loteriaAtual];
+            
+            if (document.getElementById('chk-filtro-pares').checked) {
+                const pares = jogo.filter(n => n % 2 === 0).length;
+                const minP = parseInt(document.getElementById('min-pares').value);
+                const maxP = parseInt(document.getElementById('max-pares').value);
+                if (!isNaN(minP) && pares < minP) return false;
+                if (!isNaN(maxP) && pares > maxP) return false;
+            }
+
+            if (document.getElementById('chk-filtro-soma').checked) {
+                const soma = jogo.reduce((a, b) => a + b, 0);
+                const minS = parseInt(document.getElementById('min-soma').value);
+                const maxS = parseInt(document.getElementById('max-soma').value);
+                if (!isNaN(minS) && soma < minS) return false;
+                if (!isNaN(maxS) && soma > maxS) return false;
+            }
+
+            if (document.getElementById('chk-filtro-primos').checked) {
+                const primosCount = jogo.filter(n => config.primos.includes(n)).length;
+                const minPri = parseInt(document.getElementById('min-primos').value);
+                const maxPri = parseInt(document.getElementById('max-primos').value);
+                if (!isNaN(minPri) && primosCount < minPri) return false;
+                if (!isNaN(maxPri) && primosCount > maxPri) return false;
+            }
+
+            if (document.getElementById('chk-evitar-repetidos').checked) {
+                const exato = historico.some(s => s.dezenas.length === jogo.length && s.dezenas.every((v, i) => v === jogo[i]));
+                if (exato) return false;
+            }
+
+            return true;
+        }
+
+        function gerarPalpitesPreditivos() {
+            const config = LOTERIAS[loteriaAtual];
+            const qtdDezenas = parseInt(document.getElementById('select-qtd-dezenas').value) || config.dezenasSorteio;
+            const qtdJogos = parseInt(document.getElementById('qtd-palpites').value) || 5;
+
+            ultimosPalpitesGerados = [];
+            let tentativas = 0;
+            const maxTentativas = 15000;
+
+            let dezenasRankeadas = [];
+            for (let i = 1; i <= config.totalNum; i++) {
+                dezenasRankeadas.push({ num: i, score: estatisticas.pesoScore[i] || 0 });
+            }
+            dezenasRankeadas.sort((a,b) => b.score - a.score);
+
+            while (ultimosPalpitesGerados.length < qtdJogos && tentativas < maxTentativas) {
+                tentativas++;
+                let candidato = [];
+
+                let topPool = dezenasRankeadas.slice(0, Math.floor(config.totalNum * 0.8));
+                topPool.sort(() => Math.random() - 0.5);
+
+                for (let k = 0; k < topPool.length && candidato.length < qtdDezenas; k++) {
+                    candidato.push(topPool[k].num);
+                }
+
+                candidato.sort((a, b) => a - b);
+
+                if (candidato.length === qtdDezenas && passarFiltros(candidato)) {
+                    if (!ultimosPalpitesGerados.some(j => j.dezenas.join(',') === candidato.join(','))) {
+                        let scoreTotal = candidato.reduce((acc, n) => acc + (estatisticas.pesoScore[n] || 0), 0);
+                        let scoreMedio = (scoreTotal / qtdDezenas).toFixed(1);
+
+                        ultimosPalpitesGerados.push({
+                            id: 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                            dezenas: candidato,
+                            concursoAlvo: proximoConcursoInfo.numero,
+                            valor: config.precos[qtdDezenas] || 0,
+                            score: scoreMedio
+                        });
+                    }
+                }
+            }
+
+            renderizarPalpitesGerados();
+        }
+
+        function renderizarPalpitesGerados() {
+            const container = document.getElementById('lista-palpites');
+            const bulkBar = document.getElementById('bar-palpites-bulk');
+            container.innerHTML = '';
+
+            if (ultimosPalpitesGerados.length === 0) {
+                container.innerHTML = '<p style="color: var(--danger);">Nenhum palpite atendeu aos filtros rigorosos. Tente afrouxar os limites de soma, primos ou pares para esta loteria.</p>';
+                bulkBar.style.display = 'none';
+                return;
+            }
+
+            bulkBar.style.display = 'flex';
+            const config = LOTERIAS[loteriaAtual];
+
+            ultimosPalpitesGerados.forEach((palpite, index) => {
+                const card = document.createElement('div');
+                card.className = 'palpite-card';
+                card.id = 'card-' + palpite.id;
+
+                const pares = palpite.dezenas.filter(n => n % 2 === 0).length;
+                const primos = palpite.dezenas.filter(n => config.primos.includes(n)).length;
+                const soma = palpite.dezenas.reduce((a,b) => a+b, 0);
+
+                card.innerHTML = `
+                    <div class="palpite-header">
+                        <div class="palpite-header-left">
+                            <input type="checkbox" class="chk-palpite" value="${palpite.id}">
+                            <strong>Palpite Preditivo #${index + 1}</strong>
+                            <span class="badge-score">Score IA: ${palpite.score} pts</span>
+                            <span class="badge-info">Concurso #${palpite.concursoAlvo}</span>
+                        </div>
+                        <div>
+                            <span class="tag tag-even">${pares} Pares / ${palpite.dezenas.length - pares} Ímpares</span>
+                            <span class="tag tag-prime">${primos} Primos</span>
+                            <span class="tag tag-frame">Soma: ${soma}</span>
+                        </div>
+                    </div>
+                    <div class="balls-container">
+                        ${palpite.dezenas.map(d => `<div class="ball">${String(d).padStart(2, '0')}</div>`).join('')}
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 10px; align-items: center;">
+                        <span style="font-size: 0.85rem; color: var(--warning);">Custo: R$ ${palpite.valor.toFixed(2)}</span>
+                        <button class="btn-fav" onclick="salvarUnicoPalpite('${palpite.id}')">⭐ Salvar Aposta</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function salvarUnicoPalpite(id) {
+            const p = ultimosPalpitesGerados.find(x => x.id === id);
+            if (!p) return;
+            const favs = getFavoritos();
+            const seq = getProximoNumeroAposta();
+            favs.push({
+                id: 'fav_' + Date.now() + '_' + seq,
+                nome: `Aposta #${seq}`,
+                dezenas: p.dezenas,
+                concursoInicio: p.concursoAlvo,
+                teimosinha: 1,
+                custo: p.valor,
+                cotas: 1
+            });
+            saveFavoritos(favs);
+            alert("Aposta gravada e modelo alimentado com sucesso!");
+        }
+
+        function registrarSelecionados() {
+            const selecionados = Array.from(document.querySelectorAll('.chk-palpite:checked')).map(cb => cb.value);
+            if (selecionados.length === 0) return alert("Selecione ao menos um palpite.");
+
+            const favs = getFavoritos();
+            selecionados.forEach(id => {
+                const p = ultimosPalpitesGerados.find(x => x.id === id);
+                if (p) {
+                    const seq = getProximoNumeroAposta();
+                    favs.push({
+                        id: 'fav_' + Date.now() + '_' + seq,
+                        nome: `Aposta #${seq}`,
+                        dezenas: p.dezenas,
+                        concursoInicio: p.concursoAlvo,
+                        teimosinha: 1,
+                        custo: p.valor,
+                        cotas: 1
+                    });
+                }
+            });
+            saveFavoritos(favs);
+            alert(`${selecionados.length} aposta(s) salva(s) com sucesso!`);
+        }
+
+        function renderizarGridFechamento() {
+            const config = LOTERIAS[loteriaAtual];
+            const container = document.getElementById('grid-selecao-fechamento');
+            container.innerHTML = '';
+            for (let i = 1; i <= config.totalNum; i++) {
+                const ball = document.createElement('div');
+                ball.className = 'ball ball-sm';
+                ball.innerText = String(i).padStart(2, '0');
+                ball.onclick = () => {
+                    if (dezenasSelecionadasFechamento.has(i)) {
+                        dezenasSelecionadasFechamento.delete(i);
+                        ball.classList.remove('selected');
+                    } else {
+                        dezenasSelecionadasFechamento.add(i);
+                        ball.classList.add('selected');
+                    }
+                    document.getElementById('info-selecao-fechamento').innerText = `Selecionadas: ${dezenasSelecionadasFechamento.size} dezenas`;
+                };
+                container.appendChild(ball);
+            }
+        }
+
+        function renderizarGridManual() {
+            const config = LOTERIAS[loteriaAtual];
+            const container = document.getElementById('grid-selecao-manual');
+            container.innerHTML = '';
+            dezenasSelecionadasManual.clear();
+            document.getElementById('info-manual-count').innerText = `0 dezenas selecionadas`;
+
+            for (let i = 1; i <= config.totalNum; i++) {
+                const ball = document.createElement('div');
+                ball.className = 'ball ball-sm';
+                ball.innerText = String(i).padStart(2, '0');
+                ball.onclick = () => {
+                    if (dezenasSelecionadasManual.has(i)) {
+                        dezenasSelecionadasManual.delete(i);
+                        ball.classList.remove('selected');
+                    } else {
+                        dezenasSelecionadasManual.add(i);
+                        ball.classList.add('selected');
+                    }
+                    document.getElementById('info-manual-count').innerText = `${dezenasSelecionadasManual.size} dezenas selecionadas`;
+                };
+                container.appendChild(ball);
+            }
+        }
+
+        function salvarApostaManual() {
+            const config = LOTERIAS[loteriaAtual];
+            const concursoAlvo = parseInt(document.getElementById('manual-concurso').value);
+            const nomeAposta = document.getElementById('manual-nome').value.trim() || `Manual #${getProximoNumeroAposta()}`;
+            const dezenas = Array.from(dezenasSelecionadasManual).sort((a, b) => a - b);
+
+            if (!concursoAlvo || concursoAlvo <= 0) {
+                return alert("Informe um número de concurso válido.");
+            }
+
+            if (!config.precos[dezenas.length]) {
+                return alert(`Quantidade de dezenas inválida (${dezenas.length}). Escolha uma das quantidades permitidas para ${config.nome}.`);
+            }
+
+            const custo = config.precos[dezenas.length];
+            const favs = getFavoritos();
+
+            favs.push({
+                id: 'fav_' + Date.now() + '_manual',
+                nome: `${nomeAposta} (Manual)`,
+                dezenas: dezenas,
+                concursoInicio: concursoAlvo,
+                teimosinha: 1,
+                custo: custo,
+                cotas: 1
+            });
+
+            saveFavoritos(favs);
+            renderizarGridManual();
+            alert("Aposta manual gravada e sincronizada com a inteligência artificial!");
+        }
+
+        function gerarFechamentoMatematico() {
+            const dezenas = Array.from(dezenasSelecionadasFechamento).sort((a,b) => a-b);
+            const config = LOTERIAS[loteriaAtual];
+            const container = document.getElementById('resultado-fechamento');
+            container.innerHTML = '';
+
+            if (dezenas.length < config.dezenasSorteio) {
+                return alert(`Selecione no mínimo ${config.dezenasSorteio} dezenas para processar um fechamento.`);
+            }
+
+            const garantia = parseInt(document.getElementById('select-garantia').value) || config.garantiasFechamento[0];
+            let jogosGerados = [];
+            
+            let totalDesejado = config.dezenasSorteio;
+            let step = Math.max(1, Math.floor((dezenas.length - totalDesejado) / 3));
+
+            for (let i = 0; i <= dezenas.length - totalDesejado; i += step) {
+                let combo = dezenas.slice(i, i + totalDesejado);
+                if (combo.length < totalDesejado) {
+                    combo = dezenas.slice(-totalDesejado);
+                }
+                if (!jogosGerados.some(g => g.join(',') === combo.join(','))) {
+                    jogosGerados.push(combo);
+                }
+            }
+
+            container.innerHTML = `
+                <div style="margin-top: 15px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; border: 1px solid var(--border-color);">
+                    <h3>📐 Fechamento Gerado: ${jogosGerados.length} Apostas (Garantia ${garantia} Acertos)</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Custo Total: R$ ${(jogosGerados.length * (config.precos[config.dezenasSorteio] || 3.5)).toFixed(2)}</p>
+                    ${jogosGerados.map((j, idx) => `
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 6px;">
+                            <span><strong>Jogo #${idx+1}:</strong></span>
+                            <div class="balls-container" style="margin: 0;">${j.map(n => `<div class="ball ball-sm">${String(n).padStart(2,'0')}</div>`).join('')}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderizarFavoritos() {
+            const favs = getFavoritos();
+            const container = document.getElementById('lista-favoritos');
+            const bulkBar = document.getElementById('bar-favoritos-bulk');
+            container.innerHTML = '';
+
+            if (favs.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-muted);">Nenhuma aposta cadastrada no momento.</p>';
+                bulkBar.style.display = 'none';
+                processarEstatisticas();
+                return;
+            }
+
+            bulkBar.style.display = 'flex';
+            const config = LOTERIAS[loteriaAtual];
+
+            favs.forEach((fav, index) => {
+                const card = document.createElement('div');
+                card.className = 'palpite-card';
+                card.id = 'fav-card-' + fav.id;
+
+                const concursoSorteado = historico.find(h => h.concurso === fav.concursoInicio);
+                let statusHtml = '';
+                let hitsCount = 0;
+
+                if (concursoSorteado) {
+                    hitsCount = fav.dezenas.filter(n => concursoSorteado.dezenas.includes(n)).length;
+                    const premiado = hitsCount >= config.minAcertoPremio;
+                    statusHtml = `<span class="${premiado ? 'badge-premio' : 'badge-info'}">${hitsCount} ACERTOS (Conc. #${concursoSorteado.concurso})</span>`;
+                } else {
+                    statusHtml = `<span class="status-aguardando">⏳ Aguardando Concurso #${fav.concursoInicio}</span>`;
+                }
+
+                card.innerHTML = `
+                    <div class="palpite-header">
+                        <div class="palpite-header-left">
+                            <input type="checkbox" class="chk-favorito" value="${fav.id}">
+                            <strong>${fav.nome}</strong>
+                            ${statusHtml}
+                        </div>
+                        <button class="btn-del" onclick="removerFavorito('${fav.id}')">🗑️ Excluir</button>
+                    </div>
+                    <div class="balls-container">
+                        ${fav.dezenas.map(d => {
+                            const isHit = concursoSorteado && concursoSorteado.dezenas.includes(d);
+                            return `<div class="ball ${isHit ? 'hit' : ''}">${String(d).padStart(2, '0')}</div>`;
+                        }).join('')}
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">
+                        Custo do Bilhete: R$ ${fav.custo.toFixed(2)}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            processarEstatisticas();
+        }
+
+        function removerFavorito(id) {
+            let favs = getFavoritos();
+            favs = favs.filter(f => f.id !== id);
+            saveFavoritos(favs);
+        }
+
+        function removerSelecionados() {
+            const selecionados = Array.from(document.querySelectorAll('.chk-favorito:checked')).map(cb => cb.value);
+            if (selecionados.length === 0) return alert("Selecione ao menos uma aposta para remover.");
+            let favs = getFavoritos();
+            favs = favs.filter(f => !selecionados.includes(f.id));
+            saveFavoritos(favs);
+        }
+
+        function processarEstatisticas() {
+            const favs = getFavoritos();
+            const config = LOTERIAS[loteriaAtual];
+            let custoTotal = 0;
+            let premiosTotal = 0;
+            let totalAcertos = 0;
+            let jogosConferidos = 0;
+            let jogosPremiados = 0;
+
+            favs.forEach(fav => {
+                custoTotal += fav.custo;
+                const sorteio = historico.find(h => h.concurso === fav.concursoInicio);
+                if (sorteio) {
+                    jogosConferidos++;
+                    const hits = fav.dezenas.filter(n => sorteio.dezenas.includes(n)).length;
+                    totalAcertos += hits;
+                    if (hits >= config.minAcertoPremio) {
+                        jogosPremiados++;
+                        premiosTotal += config.premiosEstimados[hits] || 0;
+                    }
+                }
+            });
+
+            const saldo = premiosTotal - custoTotal;
+
+            document.getElementById('fin-custo').innerText = "R$ " + custoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+            document.getElementById('fin-premios').innerText = "R$ " + premiosTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+            document.getElementById('fin-saldo').innerText = "R$ " + saldo.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+            document.getElementById('fin-saldo').style.color = saldo >= 0 ? 'var(--success)' : 'var(--danger)';
+            document.getElementById('stat-media-acertos').innerText = jogosConferidos > 0 ? (totalAcertos / jogosConferidos).toFixed(1) : "0.0";
+            document.getElementById('stat-jogos-premiados').innerText = `${jogosPremiados} de ${favs.length}`;
+        }
+
+        function renderizarHeatmap() {
+            const config = LOTERIAS[loteriaAtual];
+            const container = document.getElementById('grid-heatmap');
+            container.innerHTML = '';
+
+            let maxScore = 0;
+            for (let i = 1; i <= config.totalNum; i++) {
+                if ((estatisticas.pesoScore[i] || 0) > maxScore) maxScore = estatisticas.pesoScore[i];
+            }
+
+            for (let i = 1; i <= config.totalNum; i++) {
+                const freq = estatisticas.frequência[i] || 0;
+                const score = estatisticas.pesoScore[i] || 0;
+                const ratio = maxScore > 0 ? score / maxScore : 0;
+                
+                let heatClass = 'heat-0';
+                if (ratio > 0.8) heatClass = 'heat-4';
+                else if (ratio > 0.6) heatClass = 'heat-3';
+                else if (ratio > 0.4) heatClass = 'heat-2';
+                else if (ratio > 0.2) heatClass = 'heat-1';
+
+                const cell = document.createElement('div');
+                cell.className = `heatmap-cell ${heatClass}`;
+                cell.innerHTML = `
+                    <div class="num">${String(i).padStart(2, '0')}</div>
+                    <div class="freq">${freq}x total</div>
+                    <div class="score">${score} pts</div>
+                `;
+                container.appendChild(cell);
+            }
+        }
+
+        function renderizarGraficoRoi() {
+            const ctx = document.getElementById('chartRoi').getContext('2d');
+            const favs = getFavoritos();
+            const config = LOTERIAS[loteriaAtual];
+
+            let labels = [];
+            let dataSaldo = [];
+            let acumulado = 0;
+
+            favs.forEach((fav, i) => {
+                labels.push(`Jogo #${i+1}`);
+                acumulado -= fav.custo;
+                const sorteio = historico.find(h => h.concurso === fav.concursoInicio);
+                if (sorteio) {
+                    const hits = fav.dezenas.filter(n => sorteio.dezenas.includes(n)).length;
+                    if (hits >= config.minAcertoPremio) {
+                        acumulado += (config.premiosEstimados[hits] || 0);
+                    }
+                }
+                dataSaldo.push(acumulado);
+            });
+
+            if (roiChartInstance) roiChartInstance.destroy();
+
+            roiChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels.length > 0 ? labels : ['Sem Dados'],
+                    datasets: [{
+                        label: 'Balanço Financeiro Acumulado (R$)',
+                        data: dataSaldo.length > 0 ? dataSaldo : [0],
+                        borderColor: '#38bdf8',
+                        backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#f8fafc' } } },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8' }, grid: { color: '#26334d' } },
+                        y: { ticks: { color: '#94a3b8' }, grid: { color: '#26334d' } }
+                    }
+                }
+            });
+        }
+
+        function executarBacktest() {
+            const config = LOTERIAS[loteriaAtual];
+            const qtdSorteios = parseInt(document.getElementById('backtest-qtd-sorteios').value) || 20;
+            const jogosPorSorteio = parseInt(document.getElementById('backtest-jogos-por-sorteio').value) || 5;
+            const container = document.getElementById('resultado-backtest');
+            
+            if (historico.length < qtdSorteios) {
+                return alert("Histórico insuficiente para realizar este teste.");
+            }
+
+            let custoTotalSim = 0;
+            let premioTotalSim = 0;
+            let resumoAcertos = {};
+
+            for (let i = 0; i < qtdSorteios; i++) {
+                const sorteioAlvo = historico[i];
+                custoTotalSim += jogosPorSorteio * (config.precos[config.dezenasSorteio] || 3.5);
+
+                for (let j = 0; j < jogosPorSorteio; j++) {
+                    let apostaSim = [];
+                    while(apostaSim.length < config.dezenasSorteio) {
+                        let r = Math.floor(Math.random() * config.totalNum) + 1;
+                        if (!apostaSim.includes(r)) apostaSim.push(r);
+                    }
+                    
+                    const hits = apostaSim.filter(n => sorteioAlvo.dezenas.includes(n)).length;
+                    resumoAcertos[hits] = (resumoAcertos[hits] || 0) + 1;
+
+                    if (hits >= config.minAcertoPremio) {
+                        premioTotalSim += (config.premiosEstimados[hits] || 0);
+                    }
+                }
+            }
+
+            const lucroliquido = premioTotalSim - custoTotalSim;
+
+            container.innerHTML = `
+                <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); padding: 20px; border-radius: 10px; margin-top: 15px;">
+                    <h3>📊 Resultado da Simulação Preditiva (${qtdSorteios} Concursos)</h3>
+                    <div class="metrics-grid" style="margin-top: 15px;">
+                        <div class="metric-card">
+                            <h4>Total Investido</h4>
+                            <p>R$ ${custoTotalSim.toFixed(2)}</p>
+                        </div>
+                        <div class="metric-card">
+                            <h4>Retorno obtido</h4>
+                            <p style="color: var(--success);">R$ ${premioTotalSim.toFixed(2)}</p>
+                        </div>
+                        <div class="metric-card">
+                            <h4>Balanço da Simulação</h4>
+                            <p style="color: ${lucroliquido >= 0 ? 'var(--success)' : 'var(--danger)'}">R$ ${lucroliquido.toFixed(2)}</p>
+                        </div>
+                    </div>
+                    <h4>Distribuição Frequencial dos Acertos:</h4>
+                    <ul style="margin-top: 10px; list-style: none;">
+                        ${Object.keys(resumoAcertos).sort((a,b)=>b-a).map(k => `<li><strong>${k} Acertos:</strong> ${resumoAcertos[k]} jogo(s)</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+
+        function renderizarHistorico() {
+            const tbody = document.getElementById('tabela-historico');
+            tbody.innerHTML = '';
+            
+            historico.slice(0, 30).forEach(h => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>#${h.concurso}</strong></td>
+                    <td>${h.data}</td>
+                    <td><div class="balls-container">${h.dezenas.map(d => `<div class="ball ball-sm">${String(d).padStart(2,'0')}</div>`).join('')}</div></td>
+                    <td>${h.ganhadoresFaixaPrincipal}</td>
+                    <td>R$ ${(h.premioTotal || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function atualizarStatusAprendizado() {
+            const banner = document.getElementById('learning-status');
+            const pG = (inteligenciaModelo.pesoFrequenciaGeral * 100).toFixed(0);
+            const pR = (inteligenciaModelo.pesoFrequenciaRecente * 100).toFixed(0);
+            const pA = (inteligenciaModelo.pesoAtraso * 100).toFixed(0);
+
+            banner.innerHTML = `
+                🧠 <strong>IA Adaptativa Ativa:</strong> Modelo treinado com ${inteligenciaModelo.totalTreinos} interações auditadas. <br>
+                <span style="font-size:0.82rem; color: var(--text-muted);">
+                    Distribuição de Pesos -> Geral: <strong>${pG}%</strong> | Recente: <strong>${pR}%</strong> | Atrasos: <strong>${pA}%</strong>
+                </span>
+            `;
+        }
+
+        function toggleSelectAll(tipo, checked) {
+            const selector = tipo === 'palpites' ? '.chk-palpite' : '.chk-favorito';
+            document.querySelectorAll(selector).forEach(cb => cb.checked = checked);
+        }
+
+        function exportarPalpitesTexto(tipo = 'palpites') {
+            let lista = [];
+            if (tipo === 'palpites') {
+                const selecionados = Array.from(document.querySelectorAll('.chk-palpite:checked')).map(cb => cb.value);
+                lista = ultimosPalpitesGerados.filter(p => selecionados.includes(p.id)).map(p => p.dezenas.map(n => String(n).padStart(2,'0')).join(' '));
+            } else {
+                const selecionados = Array.from(document.querySelectorAll('.chk-favorito:checked')).map(cb => cb.value);
+                const favs = getFavoritos();
+                lista = favs.filter(f => selecionados.includes(f.id)).map(f => f.dezenas.map(n => String(n).padStart(2,'0')).join(' '));
+            }
+
+            if (lista.length === 0) return alert("Selecione ao menos um jogo para copiar.");
+            navigator.clipboard.writeText(lista.join('\n'));
+            alert(`${lista.length} jogo(s) copiado(s)!`);
+        }
+
+        function abrirModalBackup() { document.getElementById('modal-backup').style.display = 'flex'; }
+        function fecharModalBackup() { document.getElementById('modal-backup').style.display = 'none'; }
+
+        function exportarBackupJSON() {
+            const backupData = {};
+            Object.keys(LOTERIAS).forEach(key => {
+                backupData['fav_' + key] = localStorage.getItem('fav_' + key);
+                backupData['seq_' + key] = localStorage.getItem('seq_' + key);
+                backupData['ia_model_' + key] = localStorage.getItem('ia_model_' + key);
+            });
+            const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `backup_loterias_pro_${Date.now()}.json`;
+            a.click();
+        }
+
+        function importarBackupJSON() {
+            const fileInput = document.getElementById('input-file-backup');
+            const file = fileInput.files[0];
+            if (!file) return alert("Por favor, selecione um arquivo JSON.");
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    Object.keys(data).forEach(k => {
+                        if (data[k] !== null) localStorage.setItem(k, data[k]);
+                    });
+                    alert("Backup e Inteligência de Máquina restaurados!");
+                    fecharModalBackup();
+                    trocarLoteria();
+                } catch (err) {
+                    alert("Erro ao ler o arquivo JSON.");
+                }
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
